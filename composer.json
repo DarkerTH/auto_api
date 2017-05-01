@@ -1,0 +1,7 @@
+{
+    "name": "auto_api",
+    "type": "project",
+    "require": {
+        "silex/silex": "~2.0"
+    }
+}
