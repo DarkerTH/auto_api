@@ -8,6 +8,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 //Request::setTrustedProxies(array('127.0.0.1'));
 
+//require_once('config.php');
+
 $app->get('/', function () use ($app) {
     return $app['twig']->render('index.html.twig', array());
 })
@@ -33,6 +35,14 @@ $app->error(function (\Exception $e, Request $request, $code) use ($app) {
 /* Custom */
 
 $app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufacturer, $model) {
+
+    $manufacturer = preg_replace("/[^0-9a-zA-Z ]/", "", $manufacturer);
+    $model = preg_replace("/[^0-9a-zA-Z ]/", "", $model);
+
+    $filename = md5(microtime());
+
+    echo shell_exec("sudo /usr/bin/python2.7 /var/www/html/auto_scrapy/auto/auto/spiders/auto_spider.py ".$manufacturer." ".$model."");
+
 
     return new Response('Thank you for your feedback!', 200);
 });
