@@ -65,18 +65,25 @@ $app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufactu
         $file_modified_at = filemtime($file_path);
 
         if (time() - $file_modified_at < $app['api.cacheTime']) {
-            $get_file = json_decode(file_get_contents($file_path));
-            return $app->json($get_file, 200);
+            $get_file = file_get_contents($file_path);
+            $response = new Response($get_file, 200);
+            $response->headers->set('Content-Type', 'application/json; charset=utf-8');
+            return $response;
         }
 
     }
 
     $crawl = trim(shell_exec("sudo /usr/bin/python2.7 " . $crawler_path . " " . $file_name_md5 . " " . $manufacturer . " " . $model . " " . $year_from . " " . $year_to . " " . $price_from . " " . $price_to));
+    $codepoints = ['\u0105', '\u0104', '\u010D', '\u010C', '\u0119', '\u0118', '\u0117', '\u0116', '\u012F', '\u012E', '\u0161', '\u0160', '\u0173', '\u0172', '\u016B', '\u016A', '\u017E', '\u017D'];
+    $letters = ['ą', 'Ą', 'č', 'Č', 'ę', 'Ę', 'ė', 'Ė', 'į', 'Į', 'š', 'Š', 'ų', 'Ų', 'ū', 'Ū', 'ž', 'Ž'];
+    $crawl = str_replace($codepoints, $letters, $crawl);
     file_put_contents($file_path, $crawl);
 
     if (file_exists($file_path)) {
-        $get_file = json_decode(file_get_contents($file_path));
-        return $app->json($get_file, 200);
+        $get_file = file_get_contents($file_path);
+        $response = new Response($get_file, 200);
+        $response->headers->set('Content-Type', 'application/json; charset=utf-8');
+        return $response;
     }
 
     return $app->json([
