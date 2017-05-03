@@ -38,5 +38,5 @@
             "php -S localhost:8888 -t web"
         ]
     },
-    "minimum-stability": "dev"
+    "minimum-stability": "stable"
 }
