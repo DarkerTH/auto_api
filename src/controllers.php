@@ -7,7 +7,6 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 //Request::setTrustedProxies(array('127.0.0.1'));
-$app['debug'] = true;
 
 $app->get('/', function () use ($app) {
     return $app['twig']->render('index.html.twig', array());
@@ -53,7 +52,6 @@ $app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufactu
 
     $cars_path = $app['api.carsPath'];
     $crawler_path = $app['api.crawlerPath'];
-    echo $crawler_path;
 
 
     if (!file_exists($cars_path)) {
@@ -66,7 +64,7 @@ $app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufactu
     if (file_exists($file_path)) {
         $file_modified_at = filemtime($file_path);
 
-        if (time() - $file_modified_at < 5*60) {
+        if (time() - $file_modified_at < $app['api.cacheTime']) {
             $get_file = json_decode(file_get_contents($file_path));
             return $app->json($get_file, 200);
         }
