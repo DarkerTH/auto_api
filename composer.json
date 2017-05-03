@@ -21,7 +21,8 @@
         "symfony/security": "~2.8|^3.0",
         "symfony/translation": "~2.8|^3.0",
         "symfony/twig-bridge": "~2.8|^3.0",
-        "symfony/validator": "~2.8|^3.0"
+        "symfony/validator": "~2.8|^3.0",
+        "darkerth/auto_scrapy": "dev-master"
     },
     "autoload": {
         "psr-0": { "": "src/" }
@@ -36,5 +37,6 @@
             "echo 'Started web server on http://localhost:8888'",
             "php -S localhost:8888 -t web"
         ]
-    }
+    },
+    "minimum-stability": "dev"
 }

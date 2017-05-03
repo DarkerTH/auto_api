@@ -33,7 +33,7 @@ $app->error(function (\Exception $e, Request $request, $code) use ($app) {
 /* Custom */
 
 $app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufacturer, $model) use ($app) {
-    if ($request->query->get('key') !== "k12h3gnc98vbzcx87ASDvcxzbxcFDNSKJ897") {
+    if ($request->query->get('key') !== $app['api.key']) {
         return $app->json([
             'errors' => [
                 [
@@ -51,8 +51,12 @@ $app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufactu
     $price_from = $request->query->get('price_from') ? $request->query->get('price_from') : 0;
     $price_to = $request->query->get('price_to') ? $request->query->get('price_to') : 200000;
 
-    $cars_path = $_SERVER['DOCUMENT_ROOT'] . dirname($request->getBasePath()) . '/var/cars';
-    if (!file_exists($cars_path)){
+    $cars_path = $app['api.carsPath'];
+    $crawler_path = $app['api.crawlerPath'];
+    echo $crawler_path;
+
+
+    if (!file_exists($cars_path)) {
         mkdir($cars_path, 0777);
     }
 
@@ -62,14 +66,14 @@ $app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufactu
     if (file_exists($file_path)) {
         $file_modified_at = filemtime($file_path);
 
-        if (time() - $file_modified_at < 1 * 300) {
+        if (time() - $file_modified_at < 5*60) {
             $get_file = json_decode(file_get_contents($file_path));
             return $app->json($get_file, 200);
         }
 
     }
 
-    $crawl = trim(shell_exec("sudo /usr/bin/python2.7 /var/www/html/auto_scrapy/auto/auto/spiders/auto_spider.py " . $file_name_md5 . " " . $manufacturer . " " . $model . " " . $year_from . " " . $year_to . " " . $price_from . " " . $price_to));
+    $crawl = trim(shell_exec("sudo /usr/bin/python2.7 " . $crawler_path . " " . $file_name_md5 . " " . $manufacturer . " " . $model . " " . $year_from . " " . $year_to . " " . $price_from . " " . $price_to));
     file_put_contents($file_path, $crawl);
 
     if (file_exists($file_path)) {
