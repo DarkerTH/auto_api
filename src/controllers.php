@@ -45,10 +45,10 @@ $app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufactu
     $manufacturer = preg_replace("/[^0-9a-zA-Z ]/", "", $manufacturer);
     $model = preg_replace("/[^0-9a-zA-Z ]/", "", $model);
 
-    $year_from = $request->query->get('year_from') ? $request->query->get('year_from') : 1900;
-    $year_to = $request->query->get('year_to') ? $request->query->get('year_to') : 2018;
-    $price_from = $request->query->get('price_from') ? $request->query->get('price_from') : 0;
-    $price_to = $request->query->get('price_to') ? $request->query->get('price_to') : 200000;
+    $year_from = $request->query->get('year_from') ? preg_replace('/\D/', '', $request->query->get('year_from')) : 1900;
+    $year_to = $request->query->get('year_to') ? preg_replace('/\D/', '', $request->query->get('year_to')) : 2018;
+    $price_from = $request->query->get('price_from') ? preg_replace('/\D/', '', $request->query->get('price_from')) : 0;
+    $price_to = $request->query->get('price_to') ? preg_replace('/\D/', '', $request->query->get('price_to')) : 200000;
 
     $cars_path = $app['api.carsPath'];
     $crawler_path = $app['api.crawlerPath'];
