@@ -6,7 +6,12 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+use Services\API;
+
 //Request::setTrustedProxies(array('127.0.0.1'));
+$app['API'] = function () {
+    return new API();
+};
 
 $app->get('/', function () use ($app) {
     return $app['twig']->render('index.html.twig', array());
@@ -31,15 +36,146 @@ $app->error(function (\Exception $e, Request $request, $code) use ($app) {
 
 /* Custom */
 
-$app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufacturer, $model) use ($app) {
+$app->get('/models/{brand_id}', function (Request $request, $brand_id) use ($app) {
     if ($request->query->get('key') !== $app['api.key']) {
-        return $app->json([
-            'errors' => [
-                [
-                    'message' => 'Access forbidden.',
-                ]
-            ]
-        ], 401);
+        return $app->json($app['API']->forbidden(), 401);
+    }
+
+    $brand_id = preg_replace("/[^0-9]/", "", $brand_id);
+
+    $cars_path = $app['api.carsPath'];
+    $crawler_path = $app['api.crawlerPath'];
+
+    if (!file_exists($cars_path)) {
+        mkdir($cars_path, 0777);
+    }
+
+    $file_name_md5 = md5('models');
+    $file_path = $cars_path . '/' . $file_name_md5 . '.json';
+
+
+    if (file_exists($file_path)) {
+        $file_modified_at = filemtime($file_path);
+
+        if (time() - $file_modified_at < $app['api.brandsCacheTime']) {
+            $get_file = file_get_contents($file_path);
+
+            $decoded = json_decode($get_file);
+            if ($brand_id !== '') {
+                if (!isset($decoded->{$brand_id})) {
+                    return $app->json($app['API']->notFound(), 404);
+                }
+
+                $decoded = $decoded->{$brand_id};
+            }
+            $encoded = json_encode($decoded);
+
+            $response = new Response($encoded, 200);
+            $response->headers->set('Content-Type', 'application/json; charset=utf-8');
+            return $response;
+        }
+    }
+
+    $crawl = $app['API']->crawl($crawler_path, 'model_spider');
+
+    $json = json_decode($crawl);
+    $newData = [];
+    foreach ($json as $website => $data) {
+        if (!isset($newData[$website])) {
+            $newData[$website] = [];
+        }
+
+        foreach ($data as $key => $model) {
+            if (!isset($newData[$website][$model->brand_id])) {
+                $newData[$website][$model->brand_id] = [];
+            }
+
+            $newData[$website][$model->brand_id][] = [
+                'model_id' => $model->model_id,
+                'model_name' => $model->model_name,
+            ];
+        }
+    }
+    $newData = $newData['autoplius'];
+    $newData = json_encode($newData);
+
+    $app['API']->save($file_path, $newData);
+
+    if (file_exists($file_path)) {
+
+        $get_file = file_get_contents($file_path);
+
+        $decoded = json_decode($get_file);
+
+        if ($brand_id !== '') {
+            if (!isset($decoded->{$brand_id})) {
+                return $app->json($app['API']->notFound(), 404);
+            }
+
+            $decoded = $decoded->{$brand_id};
+            $encoded = json_encode($decoded);
+
+            $response = new Response($encoded, 200);
+            $response->headers->set('Content-Type', 'application/json; charset=utf-8');
+            return $response;
+        }
+
+        return $app['API']->response($file_path);
+    }
+
+    return $app->json([
+        'success' => 0,
+        'message' => "Unable to fetch data.",
+    ], 503);
+
+})->value('brand_id', '');
+
+$app->get('/brands', function (Request $request) use ($app) {
+    if ($request->query->get('key') !== $app['api.key']) {
+        return $app->json($app['API']->forbidden(), 401);
+    }
+
+    $cars_path = $app['api.carsPath'];
+    $crawler_path = $app['api.crawlerPath'];
+
+    if (!file_exists($cars_path)) {
+        mkdir($cars_path, 0777);
+    }
+
+    $file_name_md5 = md5('brands');
+    $file_path = $cars_path . '/' . $file_name_md5 . '.json';
+
+    if (file_exists($file_path)) {
+        $file_modified_at = filemtime($file_path);
+
+        if (time() - $file_modified_at < $app['api.brandsCacheTime']) {
+            return $app['API']->response($file_path);
+        }
+
+    }
+
+    $crawl = $app['API']->crawl($crawler_path, 'brand_spider');
+
+    $decoded = json_decode($crawl);
+    $data = json_encode($decoded->autoplius);
+
+    $app['API']->save($file_path, $data);
+
+    if (file_exists($file_path)) {
+        return $app['API']->response($file_path);
+    }
+
+    return $app->json([
+        'success' => 0,
+        'message' => "Unable to fetch data.",
+    ], 503);
+
+});
+
+$app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufacturer, $model) use ($app) {
+
+    if ($request->query->get('key') !== $app['api.key']) {
+        return $app->json($app['API']->forbidden(), 401);
     }
 
     $manufacturer = preg_replace("/[^0-9a-zA-Z ]/", "", $manufacturer);
@@ -53,7 +189,6 @@ $app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufactu
     $cars_path = $app['api.carsPath'];
     $crawler_path = $app['api.crawlerPath'];
 
-
     if (!file_exists($cars_path)) {
         mkdir($cars_path, 0777);
     }
@@ -64,26 +199,18 @@ $app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufactu
     if (file_exists($file_path)) {
         $file_modified_at = filemtime($file_path);
 
-        if (time() - $file_modified_at < $app['api.cacheTime']) {
-            $get_file = file_get_contents($file_path);
-            $response = new Response($get_file, 200);
-            $response->headers->set('Content-Type', 'application/json; charset=utf-8');
-            return $response;
+        if (time() - $file_modified_at < $app['api.adsCacheTime']) {
+            return $app['API']->response($file_path);
         }
 
     }
 
-    $crawl = trim(shell_exec("sudo /usr/bin/python2.7 " . $crawler_path . " " . $file_name_md5 . " " . $manufacturer . " " . $model . " " . $year_from . " " . $year_to . " " . $price_from . " " . $price_to));
-    $codepoints = ['\u0105', '\u0104', '\u010D', '\u010C', '\u0119', '\u0118', '\u0117', '\u0116', '\u012F', '\u012E', '\u0161', '\u0160', '\u0173', '\u0172', '\u016B', '\u016A', '\u017E', '\u017D'];
-    $letters = ['ą', 'Ą', 'č', 'Č', 'ę', 'Ę', 'ė', 'Ė', 'į', 'Į', 'š', 'Š', 'ų', 'Ų', 'ū', 'Ū', 'ž', 'Ž'];
-    $crawl = str_replace($codepoints, $letters, $crawl);
-    file_put_contents($file_path, $crawl);
+    $crawlerArguments = $file_name_md5 . " " . $manufacturer . " " . $model . " " . $year_from . " " . $year_to . " " . $price_from . " " . $price_to;
+    $crawl = $app['API']->crawl($crawler_path, 'auto_spider', $crawlerArguments);
+    $app['API']->save($file_path, $crawl);
 
     if (file_exists($file_path)) {
-        $get_file = file_get_contents($file_path);
-        $response = new Response($get_file, 200);
-        $response->headers->set('Content-Type', 'application/json; charset=utf-8');
-        return $response;
+        return $app['API']->response($file_path);
     }
 
     return $app->json([
