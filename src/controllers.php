@@ -38,6 +38,7 @@ $app->error(function (\Exception $e, Request $request, $code) use ($app) {
 
 $app->get('/models/{brand_id}', function (Request $request, $brand_id) use ($app) {
     if ($request->query->get('key') !== $app['api.key']) {
+
         return $app->json($app['API']->forbidden(), 401);
     }
 
@@ -63,6 +64,7 @@ $app->get('/models/{brand_id}', function (Request $request, $brand_id) use ($app
             $decoded = json_decode($get_file);
             if ($brand_id !== '') {
                 if (!isset($decoded->{$brand_id})) {
+
                     return $app->json($app['API']->notFound(), 404);
                 }
 
@@ -72,6 +74,7 @@ $app->get('/models/{brand_id}', function (Request $request, $brand_id) use ($app
 
             $response = new Response($encoded, 200);
             $response->headers->set('Content-Type', 'application/json; charset=utf-8');
+
             return $response;
         }
     }
@@ -109,7 +112,7 @@ $app->get('/models/{brand_id}', function (Request $request, $brand_id) use ($app
 
         if ($brand_id !== '') {
             if (!isset($decoded->{$brand_id})) {
-                return $app->json($app['API']->notFound(), 404);
+                return $app->json($app['API']->errorJson('Brand not found.'), 404);
             }
 
             $decoded = $decoded->{$brand_id};
@@ -117,6 +120,7 @@ $app->get('/models/{brand_id}', function (Request $request, $brand_id) use ($app
 
             $response = new Response($encoded, 200);
             $response->headers->set('Content-Type', 'application/json; charset=utf-8');
+
             return $response;
         }
 
@@ -132,7 +136,8 @@ $app->get('/models/{brand_id}', function (Request $request, $brand_id) use ($app
 
 $app->get('/brands', function (Request $request) use ($app) {
     if ($request->query->get('key') !== $app['api.key']) {
-        return $app->json($app['API']->forbidden(), 401);
+
+        return $app->json($app['API']->errorJson('Access denied.'), 401);
     }
 
     $cars_path = $app['api.carsPath'];
@@ -178,16 +183,23 @@ $app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufactu
         return $app->json($app['API']->forbidden(), 401);
     }
 
-    $manufacturer = preg_replace("/[^0-9a-zA-Z ]/", "", $manufacturer);
-    $model = preg_replace("/[^0-9a-zA-Z ]/", "", $model);
+    $cars_path = $app['api.carsPath'];
+    $crawler_path = $app['api.crawlerPath'];
+
+    $manufacturer = preg_replace("/[^0-9]/", "", $manufacturer);
+    $model = preg_replace("/[^0-9]/", "", $model);
+
+    $model_manufacturer_json = $app['API']->formatModelManufacturerJSON($manufacturer, $model, $cars_path);
+
+    if (is_array($model_manufacturer_json)){
+
+        return $app->json($app['API']->errorJson($model_manufacturer_json[1]), 400);
+    }
 
     $year_from = $request->query->get('year_from') ? preg_replace('/\D/', '', $request->query->get('year_from')) : 1900;
     $year_to = $request->query->get('year_to') ? preg_replace('/\D/', '', $request->query->get('year_to')) : 2018;
     $price_from = $request->query->get('price_from') ? preg_replace('/\D/', '', $request->query->get('price_from')) : 0;
     $price_to = $request->query->get('price_to') ? preg_replace('/\D/', '', $request->query->get('price_to')) : 200000;
-
-    $cars_path = $app['api.carsPath'];
-    $crawler_path = $app['api.crawlerPath'];
 
     if (!file_exists($cars_path)) {
         mkdir($cars_path, 0777);
@@ -205,7 +217,8 @@ $app->get('/cars/{manufacturer}/{model}', function (Request $request, $manufactu
 
     }
 
-    $crawlerArguments = $file_name_md5 . " " . $manufacturer . " " . $model . " " . $year_from . " " . $year_to . " " . $price_from . " " . $price_to;
+    $crawlerArguments = "'".$model_manufacturer_json . "' " . $year_from . " " . $year_to . " " . $price_from . " " . $price_to;
+
     $crawl = $app['API']->crawl($crawler_path, 'auto_spider', $crawlerArguments);
     $app['API']->save($file_path, $crawl);
 

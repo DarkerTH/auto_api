@@ -47,25 +47,80 @@ class API implements ServiceProviderInterface
         return $output;
     }
 
-    public function forbidden()
-    {
-        return [
-            'errors' => [
-                [
-                    'message' => 'Access forbidden.',
-                ]
-            ]
+    public function formatModelManufacturerJSON($selectedBrand, $selectedModel, $cars_path){
+
+        $brands_path = $cars_path . '/' . md5('brands') . '.json';
+        $models_path = $cars_path . '/' . md5('models') . '.json';
+
+        if (!file_exists($brands_path) || !file_exists($models_path)){
+            return ['error', 'Brands and/or models not yet crawled.'];
+        }
+
+        $brands = json_decode(file_get_contents($brands_path));
+        $models = json_decode(file_get_contents($models_path));
+
+        if (count($brands) === 0 || count($models) === 0){
+            return ['error', 'Brands and/or models are empty.'];
+        }
+
+        $data = [
+            'autoplius' => [
+                'manufacturer' => '',
+                'model' => '',
+            ],
+            'autogidas' => [
+                'manufacturer' => '',
+                'model' => '',
+            ],
         ];
+
+        $foundBrand = 0;
+        $foundModel = 0;
+
+        if (!isset($models->{$selectedBrand})){
+
+            return ['error', 'Brand or model does not exist.'];
+        }
+
+        foreach ($brands as $brand){
+            if ($brand->brand_id === $selectedBrand){
+                $data['autoplius']['manufacturer'] = $brand->brand_id;
+                $data['autogidas']['manufacturer'] = str_replace(' ', '+', $brand->brand_name);
+
+                $foundBrand = 1;
+                break;
+            }
+        }
+
+        foreach ($models->{$selectedBrand} as $model){
+            if ($model->model_id === $selectedModel){
+                $data['autoplius']['model'] = $model->model_id;
+                $data['autogidas']['model'] = str_replace(' ', '+', $model->model_name);
+
+                $foundModel = 1;
+                break;
+            }
+        }
+
+        if ($foundBrand === 0 || $foundModel === 0){
+
+            return ['error', 'Manufacturer or model does not exist.'];
+        }
+
+        return json_encode($data);
+
     }
 
-    public function notFound()
-    {
+    public function errorJson($message){
+
         return [
             'errors' => [
                 [
-                    'message' => 'brand_id does not exist.',
+                    'message' => $message,
                 ]
             ]
         ];
+
     }
+
 }

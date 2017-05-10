@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/DarkerTH/auto_scrapy.git",
-                "reference": "86b109ac92538ec305824e84bceed273450a55c8"
+                "reference": "22a865a9b22da9d8e46ef07a1aabe4c0eb6ef6a1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/DarkerTH/auto_scrapy/zipball/86b109ac92538ec305824e84bceed273450a55c8",
-                "reference": "86b109ac92538ec305824e84bceed273450a55c8",
+                "url": "https://api.github.com/repos/DarkerTH/auto_scrapy/zipball/22a865a9b22da9d8e46ef07a1aabe4c0eb6ef6a1",
+                "reference": "22a865a9b22da9d8e46ef07a1aabe4c0eb6ef6a1",
                 "shasum": ""
             },
             "type": "project",
@@ -26,7 +26,7 @@
                 "MIT"
             ],
             "description": "Car-ads crawler",
-            "time": "2017-05-08 09:50:28"
+            "time": "2017-05-10 13:08:22"
         },
         {
             "name": "monolog/monolog",
